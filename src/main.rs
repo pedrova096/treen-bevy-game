@@ -6,7 +6,10 @@ mod menu;
 use menu::*;
 
 mod game;
-use game::{collision::*, common::*, player::*, wagon::*};
+use game::{common::*, player::*, wagon::*};
+
+mod collision;
+use collision::*;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -25,10 +28,10 @@ fn main() {
         .add_systems(Update, menu_sys.run_if(in_state(AppState::Menu)))
         .add_systems(OnExit(AppState::Menu), cleanup_menu)
         .add_systems(OnEnter(AppState::InGame), (setup_wagon, setup_player))
+        .add_systems(Update, camera_follow)
         .add_systems(
             FixedUpdate,
             (
-                camera_follow,
                 move_player,
                 apply_gravity,
                 check_for_collisions,
@@ -49,6 +52,7 @@ fn camera_follow(
     players: Query<&Transform, With<Player>>,
     mut cameras: Query<&mut Transform, (With<Camera>, Without<Player>)>,
 ) {
+    // TODO: Make a smooth camera follow system
     let player_transform = players.single();
 
     let pos = player_transform.translation;

@@ -1,9 +1,8 @@
-use super::{Collider, Velocity};
-use bevy::{
-    prelude::*,
-    sprite::collide_aabb::{collide, Collision},
-    sprite::MaterialMesh2dBundle,
-};
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+
+use crate::collision::Collider;
+
+use super::Velocity;
 
 #[derive(Component)]
 pub struct Player;

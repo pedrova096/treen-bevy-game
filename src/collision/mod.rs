@@ -1,7 +1,6 @@
 use bevy::{
     prelude::*,
     sprite::collide_aabb::{collide, Collision},
-    sprite::MaterialMesh2dBundle,
 };
 
 use super::{Player, Velocity};
@@ -36,9 +35,6 @@ pub fn check_for_collisions(
         );
 
         if let Some(collision) = collision {
-            //commands.entity(entity).despawn();
-            //commands.entity(other_entity).despawn();
-
             match collision {
                 Collision::Left if velocity.x > 0. => velocity.x = 0.,
                 Collision::Right if velocity.x < 0. => velocity.x = 0.,

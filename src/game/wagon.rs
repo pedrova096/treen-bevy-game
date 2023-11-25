@@ -1,6 +1,6 @@
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
-use super::Collider;
+use crate::collision::Collider;
 
 #[derive(Clone, Copy)]
 enum WagonsType {
