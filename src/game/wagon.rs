@@ -42,8 +42,11 @@ pub fn setup_wagon(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    windows: Query<&Window>,
 ) {
-    let mut x = 0.;
+    let windows_resolution = &windows.single().resolution;
+
+    let mut x = -200.; // offset from the left of the screen
     for wagon in WAGONS.iter() {
         let size = wagon.size();
 
@@ -65,7 +68,11 @@ pub fn setup_wagon(
                 MaterialMesh2dBundle {
                     mesh: meshes.add(shape::Quad::new(size).into()).into(),
                     material: materials.add(ColorMaterial::from(Color::hex(WAGON_COLOR).unwrap())),
-                    transform: Transform::from_translation(Vec3::new(x + wagon.origin(), 0., 0.)),
+                    transform: Transform::from_translation(Vec3::new(
+                        x + wagon.origin(),
+                        -windows_resolution.height() / 2. + size.y / 2. + WAGON_WHEEL_SIZE + 5.,
+                        0.,
+                    )),
                     ..default()
                 },
                 Collider::Quad(size),
