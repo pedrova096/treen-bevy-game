@@ -10,7 +10,30 @@ impl Default for Velocity {
         Self(Vec2::ZERO)
     }
 }
-pub const GRAVITY: f32 = -9.8 * 10.0; // 100.0
+#[derive(Debug, Resource)]
+pub struct Gravity(pub f32);
+
+impl Default for Gravity {
+    fn default() -> Self {
+        Self(0.)
+    }
+}
+
+// train force Resource
+#[derive(Debug, Resource)]
+pub struct TrainForce {
+    pub force: f32,
+    pub acceleration: f32,
+}
+
+impl Default for TrainForce {
+    fn default() -> Self {
+        Self {
+            force: 0.,
+            acceleration: 0.,
+        }
+    }
+}
 
 pub fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
     for (mut transform, velocity) in &mut query {
@@ -19,9 +42,9 @@ pub fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<T
     }
 }
 
-pub fn apply_gravity(mut query: Query<&mut Velocity>) {
+pub fn apply_gravity(mut query: Query<&mut Velocity>, gravity: Res<Gravity>) {
     for mut velocity in &mut query {
-        velocity.y += GRAVITY;
+        velocity.y -= gravity.0;
     }
 }
 

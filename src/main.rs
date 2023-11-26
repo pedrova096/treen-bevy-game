@@ -23,6 +23,8 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_state::<AppState>()
         .add_event::<CollisionEvent>()
+        .insert_resource(Gravity::default())
+        .insert_resource(TrainForce::default())
         .add_systems(Startup, setup)
         .add_systems(OnEnter(AppState::Menu), setup_menu)
         .add_systems(Update, menu_sys.run_if(in_state(AppState::Menu)))
@@ -33,6 +35,8 @@ fn main() {
             FixedUpdate,
             (
                 move_player,
+                push_player,
+                player_state_trigger_timer,
                 apply_gravity,
                 check_for_collisions,
                 apply_velocity,

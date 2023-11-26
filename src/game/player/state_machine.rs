@@ -4,7 +4,8 @@ use bevy::prelude::*;
 pub enum PlayerState {
     Idle,
     Moving,
-    Falling,
+    Jumping,
+    Pulling,
     Pushing,
     Invalid,
 }
@@ -13,6 +14,7 @@ pub enum PlayerState {
 pub enum PlayerEvent {
     Move,
     Jump,
+    Pull,
     Push,
     Stop,
 }
@@ -24,14 +26,38 @@ impl Default for PlayerState {
 }
 
 impl PlayerState {
+    pub fn is(&self, state: PlayerState) -> bool {
+        *self == state
+    }
+    fn transitions(&self, event: &PlayerEvent) -> PlayerState {
+        match (&self, event) {
+            (PlayerState::Idle, PlayerEvent::Move) => PlayerState::Moving,
+            (PlayerState::Idle, PlayerEvent::Push) => PlayerState::Pushing,
+            (PlayerState::Idle, PlayerEvent::Pull) => PlayerState::Pulling,
+            (PlayerState::Pushing, PlayerEvent::Move) => PlayerState::Moving,
+            (PlayerState::Pushing, PlayerEvent::Pull) => PlayerState::Pulling, // TODO: slow down
+            (PlayerState::Moving, PlayerEvent::Move) => PlayerState::Moving,
+            (PlayerState::Moving, PlayerEvent::Push) => PlayerState::Pushing,
+            (PlayerState::Moving, PlayerEvent::Stop) => PlayerState::Idle,
+            (PlayerState::Moving, PlayerEvent::Jump) => PlayerState::Jumping,
+            _ => PlayerState::Invalid,
+        }
+    }
+    pub fn can(&self, event: PlayerEvent) -> bool {
+        self.transitions(&event) != PlayerState::Invalid
+    }
     pub fn transition(&mut self, event: PlayerEvent) -> bool {
-        let (new_state, change) = match (&self, event) {
-            (PlayerState::Idle, PlayerEvent::Move) => (PlayerState::Moving, true),
-            (PlayerState::Moving, PlayerEvent::Move) => (PlayerState::Moving, true),
-            (_, PlayerEvent::Stop) => (PlayerState::Idle, true),
-            _ => (PlayerState::Invalid, false),
-        };
+        let new_state = self.transitions(&event);
+        let change = new_state != PlayerState::Invalid;
+
+        if !change {
+            print!("Invalid transition from {:?} with {:?}\n", self, event)
+        } else {
+            print!("Transition from {:?} to {:?}\n", self, new_state)
+        }
+
         *self = new_state;
+
         change
     }
 }
