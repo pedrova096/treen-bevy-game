@@ -1,8 +1,14 @@
+mod state_machine;
+
+use state_machine::PlayerState;
+
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 
 use crate::collision::Collider;
 
-use super::Velocity;
+use self::state_machine::PlayerEvent;
+
+use super::{move_towards, Velocity};
 
 #[derive(Component)]
 pub struct Player;
@@ -26,19 +32,21 @@ pub fn setup_player(
             ..default()
         },
         Player,
+        PlayerState::default(),
+        Velocity::default(), // This should be context
         Collider::Quad(Vec2::new(
             capsule.depth - capsule.radius / 2.,
             capsule.depth + 2. * capsule.radius,
         )),
-        Velocity::default(),
     ));
 }
 
 pub fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Velocity, With<Player>>,
+    mut query: Query<(&mut PlayerState, &mut Velocity), With<Player>>,
+    time: Res<Time>,
 ) {
-    let mut player_velocity = query.single_mut();
+    let (mut player_state, mut player_velocity) = query.single_mut();
     let mut direction = Vec2::ZERO;
 
     if keyboard_input.pressed(KeyCode::Left) {
@@ -47,19 +55,25 @@ pub fn move_player(
     if keyboard_input.pressed(KeyCode::Right) {
         direction.x += 1.;
     }
-    if keyboard_input.pressed(KeyCode::Up) {
-        direction.y += 1.;
-    }
-    if keyboard_input.pressed(KeyCode::Down) {
-        direction.y -= 1.;
-    }
 
     if direction.length() > 0. {
         direction = direction.normalize();
-    }
 
-    player_velocity.x = direction.x * 500.;
-    player_velocity.y = direction.y * 500.;
+        if player_state.transition(PlayerEvent::Move) {
+            let max_speed = 10.;
+            let acceleration = 100.;
+            let delta = time.delta_seconds();
+            player_velocity.x = move_towards(
+                player_velocity.x,
+                direction.x * max_speed,
+                acceleration,
+                delta,
+            );
+        }
+    } else {
+        player_state.transition(PlayerEvent::Stop);
+        player_velocity.x = 0.;
+    }
 }
 
 // jump logic
