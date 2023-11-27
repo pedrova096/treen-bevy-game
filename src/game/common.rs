@@ -38,11 +38,11 @@ impl Default for TrainForce {
 pub fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
     for (mut transform, velocity) in &mut query {
         transform.translation.x += velocity.x;
-        transform.translation.y += velocity.y * time.delta_seconds();
+        transform.translation.y += velocity.y;
     }
 }
 
-pub fn apply_gravity(mut query: Query<&mut Velocity>, gravity: Res<Gravity>) {
+pub fn apply_gravity(mut query: Query<&mut Velocity>, gravity: Res<Gravity>, time: Res<Time>) {
     for mut velocity in &mut query {
         velocity.y -= gravity.0;
     }

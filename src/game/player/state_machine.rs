@@ -34,6 +34,7 @@ impl PlayerState {
             (PlayerState::Idle, PlayerEvent::Move) => PlayerState::Moving,
             (PlayerState::Idle, PlayerEvent::Push) => PlayerState::Pushing,
             (PlayerState::Idle, PlayerEvent::Pull) => PlayerState::Pulling,
+            (PlayerState::Idle, PlayerEvent::Jump) => PlayerState::Jumping,
             (PlayerState::Pushing, PlayerEvent::Move) => PlayerState::Moving,
             (PlayerState::Pushing, PlayerEvent::Pull) => PlayerState::Pulling, // TODO: slow down
             (PlayerState::Moving, PlayerEvent::Move) => PlayerState::Moving,

@@ -27,8 +27,8 @@ impl Default for Player {
         Self {
             max_speed: 10.,
             acceleration: 100.,
-            time_jump_peak: 0.5,
-            jump_height: 128.,
+            time_jump_peak: 1.5,
+            jump_height: 10.,
             jump_velocity: 0.,
         }
     }
@@ -49,6 +49,9 @@ pub fn setup_player(
     let mut player = Player::default();
     gravity.0 = (2. * player.jump_height) / player.time_jump_peak.powi(2);
     player.jump_velocity = gravity.0 * player.time_jump_peak;
+
+    println!("Gravity: {}", gravity.0);
+    println!("Jump Velocity: {}", player.jump_velocity);
 
     commands.spawn((
         MaterialMesh2dBundle {
@@ -89,12 +92,8 @@ pub fn move_player(
         direction.y -= 1.;
     }
 
-    println!("direction: {:?}", direction.x);
-    // is direction.x NaN?
     if !direction.x.is_zero() {
-        println!("moving??");
         if player_state.transition(PlayerEvent::Move) {
-            println!("moving!!");
             let delta = time.delta_seconds();
             player_velocity.x = move_towards(
                 player_velocity.x.clone(),
@@ -108,12 +107,12 @@ pub fn move_player(
     if direction.y < 0. {
         player_state.transition(PlayerEvent::Pull);
     } else if direction.y > 0. {
-        player_state.transition(PlayerEvent::Jump);
-        assert!(player_state.is(PlayerState::Jumping));
-        player_velocity.y = -player.jump_velocity;
+        if !player_state.is(PlayerState::Jumping) && player_state.transition(PlayerEvent::Jump) {
+            player_velocity.y = player.jump_velocity;
+        }
     }
 
-    if player_state.can(PlayerEvent::Stop) && direction.length().is_zero() {
+    if direction.length().is_zero() && player_state.can(PlayerEvent::Stop) {
         player_state.transition(PlayerEvent::Stop);
         player_velocity.x = 0.;
     }
@@ -135,7 +134,6 @@ pub fn player_state_trigger_timer(
             if t.tick(time.delta()).just_finished() {
                 player_state.transition(PlayerEvent::Push);
                 stt.0 = None;
-                println!("push player")
             }
         }
         (_, Some(_)) => {
@@ -147,9 +145,7 @@ pub fn player_state_trigger_timer(
 
 pub fn push_player(mut query: Query<(&PlayerState, &mut Velocity)>, time: Res<Time>) {
     let (player_state, mut player_velocity) = query.single_mut();
-    println!("player state: {:?}", player_state);
     if player_state.is(PlayerState::Pushing) {
-        println!("pushing");
         player_velocity.x = move_towards(player_velocity.x, -20., 25., time.delta_seconds());
     }
 }
