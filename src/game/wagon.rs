@@ -10,14 +10,14 @@ enum WagonsType {
     Large,
 }
 
-const WAGON_SIZE: f32 = 250.;
-const WAGON_SPACING: f32 = 20.;
+const WAGON_SIZE: f32 = 230.;
+const WAGON_SPACING: f32 = 100.;
 impl WagonsType {
     fn size(&self) -> Vec2 {
         match self {
-            WagonsType::Head | WagonsType::Medium => Vec2::new(WAGON_SIZE * 2.25, WAGON_SIZE),
-            WagonsType::Small => Vec2::new(WAGON_SIZE * 1., WAGON_SIZE),
-            WagonsType::Large => Vec2::new(WAGON_SIZE * 3., WAGON_SIZE),
+            WagonsType::Head | WagonsType::Medium => Vec2::new(WAGON_SIZE * 3., WAGON_SIZE),
+            WagonsType::Small => Vec2::new(WAGON_SIZE * 2., WAGON_SIZE),
+            WagonsType::Large => Vec2::new(WAGON_SIZE * 5., WAGON_SIZE),
         }
     }
     fn origin(&self) -> f32 {

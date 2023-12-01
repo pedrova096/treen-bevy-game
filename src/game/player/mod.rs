@@ -27,8 +27,8 @@ impl Default for Player {
         Self {
             max_speed: 10.,
             acceleration: 100.,
-            time_jump_peak: 1.5,
-            jump_height: 10.,
+            time_jump_peak: 0.3,
+            jump_height: 4.0,
             jump_velocity: 0.,
         }
     }
@@ -40,9 +40,9 @@ pub fn setup_player(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut gravity: ResMut<Gravity>,
 ) {
-    let capsule = shape::Capsule {
-        radius: 20.,
-        depth: 50.,
+    let capsule: shape::Capsule = shape::Capsule {
+        radius: 23.,
+        depth: 20.,
         ..default()
     };
 
@@ -65,8 +65,8 @@ pub fn setup_player(
         StateTriggerTimer(None),
         Velocity::default(), // This should be context
         Collider::Quad(Vec2::new(
-            capsule.depth - capsule.radius / 2.,
-            capsule.depth + 2. * capsule.radius,
+            capsule.radius * 2.,
+            capsule.depth * 2. + capsule.radius,
         )),
     ));
 }
@@ -107,7 +107,7 @@ pub fn move_player(
     if direction.y < 0. {
         player_state.transition(PlayerEvent::Pull);
     } else if direction.y > 0. {
-        if !player_state.is(PlayerState::Jumping) && player_state.transition(PlayerEvent::Jump) {
+        if player_state.can(PlayerEvent::Jump) && player_state.transition(PlayerEvent::Jump) {
             player_velocity.y = player.jump_velocity;
         }
     }
@@ -128,7 +128,7 @@ pub fn player_state_trigger_timer(
 
     match (*player_state, timer) {
         (PlayerState::Idle, None) => {
-            stt.0 = Some(Timer::from_seconds(2.5, TimerMode::Once));
+            // stt.0 = Some(Timer::from_seconds(2.5, TimerMode::Once));
         }
         (PlayerState::Idle, Some(t)) => {
             if t.tick(time.delta()).just_finished() {

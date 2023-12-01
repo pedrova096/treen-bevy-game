@@ -1,7 +1,4 @@
-use bevy::{
-    prelude::*,
-    sprite::collide_aabb::{collide, Collision},
-};
+use bevy::{prelude::*, sprite::collide_aabb::Collision};
 
 use super::{Player, Velocity};
 
@@ -20,7 +17,7 @@ pub fn check_for_collisions(
 ) {
     let (mut velocity, mut transform, collider) = player_query.single_mut();
     // offset/scaled value, not actual size
-    let offset = 2.;
+    let offset = 4.;
     let player_size = match collider {
         Collider::Quad(size) => *size + Vec2::new(offset, offset),
     };
@@ -30,51 +27,74 @@ pub fn check_for_collisions(
             Collider::Quad(size) => *size,
         };
         // is colliding
-        let collision = collide(
+        let collision = collide_v2(
             player_translation,
             player_size,
             other_transform.translation,
             other_size,
         );
 
-        if let Some(collision) = collision {
+        if let Some((collision, diff)) = collision {
             match collision {
                 Collision::Left if velocity.x > 0. => velocity.x = 0.,
                 Collision::Right if velocity.x < 0. => velocity.x = 0.,
-                Collision::Top if velocity.y < 0. => velocity.y = 0.,
+                Collision::Top if velocity.y < 0. => {
+                    velocity.y = 0.;
+                    println!("diff: {}", diff);
+                    if diff < -1. {
+                        transform.translation.y -= diff + 1.;
+                    }
+                }
                 Collision::Bottom if velocity.y > 0. => velocity.y = 0.,
                 _ => {}
             }
 
             collision_events.send(CollisionEvent);
         }
+    }
+}
 
-        let player_position = player_translation + Vec3::new(velocity.x, velocity.y, 0.);
+pub fn collide_v2(
+    a_pos: Vec3,
+    a_size: Vec2,
+    b_pos: Vec3,
+    b_size: Vec2,
+) -> Option<(Collision, f32)> {
+    let a_min = a_pos.truncate() - a_size / 2.0;
+    let a_max = a_pos.truncate() + a_size / 2.0;
 
-        // will collide
-        let will_collide: Option<Collision> = collide(
-            player_position,
-            player_size,
-            other_transform.translation,
-            other_size,
-        );
+    let b_min = b_pos.truncate() - b_size / 2.0;
+    let b_max = b_pos.truncate() + b_size / 2.0;
 
-        if let Some(collision) = will_collide {
-            match collision {
-                Collision::Top => {
-                    let diff = player_position.y
-                        - other_transform.translation.y
-                        - other_size.y / 2.
-                        - player_size.y / 2.;
-                    println!("diff: {}", diff);
-                    if diff.abs() > 3. {
-                        velocity.y = -diff;
-                    }
-                }
-                _ => {}
-            }
+    // check to see if the two rectangles are intersecting
+    if a_min.x < b_max.x && a_max.x > b_min.x && a_min.y < b_max.y && a_max.y > b_min.y {
+        // check to see if we hit on the left or right side
+        let (x_collision, x_depth) = if a_min.x < b_min.x && a_max.x > b_min.x && a_max.x < b_max.x
+        {
+            (Collision::Left, b_min.x - a_max.x)
+        } else if a_min.x > b_min.x && a_min.x < b_max.x && a_max.x > b_max.x {
+            (Collision::Right, a_min.x - b_max.x)
+        } else {
+            (Collision::Inside, -f32::INFINITY)
+        };
 
-            collision_events.send(CollisionEvent);
+        // check to see if we hit on the top or bottom side
+        let (y_collision, y_depth) = if a_min.y < b_min.y && a_max.y > b_min.y && a_max.y < b_max.y
+        {
+            (Collision::Bottom, b_min.y - a_max.y)
+        } else if a_min.y > b_min.y && a_min.y < b_max.y && a_max.y > b_max.y {
+            (Collision::Top, a_min.y - b_max.y)
+        } else {
+            (Collision::Inside, -f32::INFINITY)
+        };
+
+        // if we had an "x" and a "y" collision, pick the "primary" side using penetration depth
+        if y_depth.abs() < x_depth.abs() {
+            Some((y_collision, y_depth))
+        } else {
+            Some((x_collision, x_depth))
         }
+    } else {
+        None
     }
 }

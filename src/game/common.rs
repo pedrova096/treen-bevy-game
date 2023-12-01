@@ -44,7 +44,7 @@ pub fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<T
 
 pub fn apply_gravity(mut query: Query<&mut Velocity>, gravity: Res<Gravity>, time: Res<Time>) {
     for mut velocity in &mut query {
-        velocity.y -= gravity.0;
+        velocity.y -= gravity.0 * time.delta_seconds();
     }
 }
 
