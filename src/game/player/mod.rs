@@ -2,7 +2,10 @@ mod state_machine;
 
 use state_machine::PlayerState;
 
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle, utils::petgraph::matrix_graph::Zero};
+use bevy::{
+    prelude::*, render::texture::TEXTURE_ASSET_INDEX, sprite::MaterialMesh2dBundle,
+    utils::petgraph::matrix_graph::Zero,
+};
 
 use crate::collision::Collider;
 
@@ -36,38 +39,33 @@ impl Default for Player {
 
 pub fn setup_player(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut gravity: ResMut<Gravity>,
 ) {
-    let capsule: shape::Capsule = shape::Capsule {
-        radius: 23.,
-        depth: 20.,
-        ..default()
-    };
+    let player_size = Vec2::new(22.0, 26.0);
 
     let mut player = Player::default();
     gravity.0 = (2. * player.jump_height) / player.time_jump_peak.powi(2);
     player.jump_velocity = gravity.0 * player.time_jump_peak;
 
-    println!("Gravity: {}", gravity.0);
-    println!("Jump Velocity: {}", player.jump_velocity);
+    let texture_handle = asset_server.load("textures/player.png");
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, player_size, 8, 4, None, None);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: meshes.add(capsule.into()).into(),
-            material: materials.add(Color::rgb(1., 1., 1.).into()),
-            transform: Transform::from_translation(Vec3::new(-100., 0., 1.)),
+        SpriteSheetBundle {
+            texture_atlas: texture_atlas_handle,
+            sprite: TextureAtlasSprite::new(0),
             ..default()
         },
         player,
         PlayerState::default(),
         StateTriggerTimer(None),
         Velocity::default(), // This should be context
-        Collider::Quad(Vec2::new(
-            capsule.radius * 2.,
-            capsule.depth * 2. + capsule.radius,
-        )),
+        Collider::Quad(player_size),
     ));
 }
 
