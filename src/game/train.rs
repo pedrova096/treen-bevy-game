@@ -1,9 +1,6 @@
-use std::sync::Arc;
-
-use bevy::{asset::StrongHandle, prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::prelude::*;
 
 use crate::collision::Collider;
-use bevy::render::render_resource::Texture;
 
 #[derive(Clone, Copy, PartialEq)]
 enum WagonsType {
@@ -13,7 +10,7 @@ enum WagonsType {
     Large,
 }
 
-mod Wagon {
+mod wagon {
     use super::WagonsType;
 
     type AssetInfo<'a> = (&'a str, f32, f32);
@@ -74,6 +71,7 @@ const WAGONS: [WagonsType; 6] = [
     WagonsType::Large,
     WagonsType::Medium,
 ];
+
 pub fn setup_train(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -81,19 +79,19 @@ pub fn setup_train(
 ) {
     let mut x = -200.;
 
-    let wheel_handle = asset_server.load(Wagon::WHEEL.0);
+    let wheel_handle = asset_server.load(wagon::WHEEL.0);
 
     let windows_resolution = &windows.single().resolution;
 
     for wagon in WAGONS.iter() {
-        let (texture, width, height) = Wagon::get_asset_info(*wagon);
+        let (texture, width, height) = wagon::get_asset_info(*wagon);
         let origin_x = width / 2.;
         commands
             .spawn((
                 SpatialBundle {
                     transform: Transform::from_xyz(
                         x + origin_x,
-                        (-windows_resolution.height() * 0.3 + height) / 2. + 16., // TODO: 0.3 is from camera projection scale
+                        (-windows_resolution.height() * 0.3 + height) / 2. + 12., // TODO: 0.3 is from camera projection scale
                         0.,
                     ),
                     ..default()
@@ -108,7 +106,7 @@ pub fn setup_train(
                     ..default()
                 });
 
-                for (x, y) in Wagon::get_wheel_position(*wagon, width, height) {
+                for (x, y) in wagon::get_wheel_position(*wagon, width, height) {
                     parent.spawn(SpriteBundle {
                         texture: wheel_handle.clone(),
                         transform: Transform::from_xyz(x, y, 0.),
@@ -117,7 +115,7 @@ pub fn setup_train(
                 }
 
                 if *wagon != WagonsType::Head {
-                    let (union_texture, union_width, _) = Wagon::UNION;
+                    let (union_texture, union_width, _) = wagon::UNION;
                     parent.spawn(SpriteBundle {
                         texture: asset_server.load(union_texture),
                         transform: Transform::from_xyz(
@@ -129,6 +127,6 @@ pub fn setup_train(
                     });
                 }
             });
-        x += width + Wagon::UNION.1;
+        x += width + wagon::UNION.1;
     }
 }

@@ -1,6 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use bevy::prelude::*;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod menu;
 use menu::*;
@@ -26,6 +27,7 @@ fn main() {
             // by linear filtering.
             ImagePlugin::default_nearest(),
         ))
+        .add_plugins(WorldInspectorPlugin::new())
         .add_state::<AppState>()
         .add_event::<CollisionEvent>()
         .insert_resource(Gravity::default())

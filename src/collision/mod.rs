@@ -40,9 +40,10 @@ pub fn check_for_collisions(
                 Collision::Right if velocity.x < 0. => velocity.x = 0.,
                 Collision::Top if velocity.y < 0. => {
                     velocity.y = 0.;
-                    println!("diff: {}", diff);
-                    if diff < -1. {
-                        transform.translation.y -= diff + 1.;
+                    let offset = 0.1;
+                    if diff < -offset - 0.01 {
+                        println!("diff: {}", diff);
+                        transform.translation.y -= diff + offset;
                     }
                 }
                 Collision::Bottom if velocity.y > 0. => velocity.y = 0.,

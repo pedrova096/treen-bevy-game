@@ -28,8 +28,8 @@ pub struct StateTriggerTimer(Option<Timer>);
 impl Default for Player {
     fn default() -> Self {
         Self {
-            max_speed: 10.,
-            acceleration: 100.,
+            max_speed: 4.,
+            acceleration: 50.,
             time_jump_peak: 0.3,
             jump_height: 4.0,
             jump_velocity: 0.,
@@ -41,8 +41,6 @@ pub fn setup_player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     mut gravity: ResMut<Gravity>,
 ) {
     let player_size = Vec2::new(22.0, 26.0);
