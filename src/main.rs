@@ -6,7 +6,7 @@ mod menu;
 use menu::*;
 
 mod game;
-use game::{common::*, player::*, wagon::*};
+use game::{common::*, player::*, train::*};
 
 mod collision;
 use collision::*;
@@ -20,16 +20,23 @@ pub enum AppState {
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(
+            // This sets image filtering to nearest
+            // This is done to prevent textures with low resolution (e.g. pixel art) from being blurred
+            // by linear filtering.
+            ImagePlugin::default_nearest(),
+        ))
         .add_state::<AppState>()
         .add_event::<CollisionEvent>()
         .insert_resource(Gravity::default())
         .insert_resource(TrainForce::default())
+        // 143, 222, 93 -> 0.56, 0.87, 0.36
+        .insert_resource(ClearColor(Color::rgb(0.56, 0.87, 0.36)))
         .add_systems(Startup, setup)
         .add_systems(OnEnter(AppState::Menu), setup_menu)
         .add_systems(Update, menu_sys.run_if(in_state(AppState::Menu)))
         .add_systems(OnExit(AppState::Menu), cleanup_menu)
-        .add_systems(OnEnter(AppState::InGame), (setup_wagon, setup_player))
+        .add_systems(OnEnter(AppState::InGame), (setup_train, setup_player))
         .add_systems(Update, camera_follow)
         .add_systems(
             FixedUpdate,
@@ -49,7 +56,9 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    let mut camera = Camera2dBundle::default();
+    camera.projection.scale = 0.3;
+    commands.spawn(camera);
 }
 
 fn camera_follow(

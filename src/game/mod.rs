@@ -1,6 +1,6 @@
 pub mod common;
 pub mod player;
-pub mod wagon;
+pub mod train;
 
 pub use common::*;
 pub use player::*;
