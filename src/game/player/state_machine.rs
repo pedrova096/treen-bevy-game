@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use super::animation::*;
+
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub enum PlayerState {
     Idle,
@@ -60,5 +62,23 @@ impl PlayerState {
         *self = new_state;
 
         change
+    }
+}
+
+impl AnimationState for PlayerState {
+    fn get_animation(&self) -> AnimationIndices {
+        match self {
+            PlayerState::Idle => AnimationIndices::Straight(AnimationStraight {
+                last: 3,
+                ..default()
+            }),
+            PlayerState::Pushing => AnimationIndices::Straight(AnimationStraight {
+                first: 8,
+                last: 12,
+                repeat_from: Some(11),
+                rate: 0.2,
+            }),
+            _ => AnimationIndices::Straight(AnimationStraight::default()),
+        }
     }
 }

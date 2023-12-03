@@ -32,6 +32,7 @@ fn main() {
         .add_event::<CollisionEvent>()
         .insert_resource(Gravity::default())
         .insert_resource(TrainForce::default())
+        .register_type::<Player>()
         // 143, 222, 93 -> 0.56, 0.87, 0.36
         .insert_resource(ClearColor(Color::rgb(0.56, 0.87, 0.36)))
         .add_systems(Startup, setup)
@@ -46,6 +47,8 @@ fn main() {
                 move_player,
                 push_player,
                 player_state_trigger_timer,
+                animate_sprite,
+                animate_change,
                 apply_gravity,
                 check_for_collisions,
                 apply_velocity,

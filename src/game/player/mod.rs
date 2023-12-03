@@ -1,20 +1,24 @@
+mod animation;
 mod state_machine;
+
+use std::time::Duration;
 
 use state_machine::PlayerState;
 
-use bevy::{
-    prelude::*, render::texture::TEXTURE_ASSET_INDEX, sprite::MaterialMesh2dBundle,
-    utils::petgraph::matrix_graph::Zero,
-};
+use bevy::{prelude::*, utils::petgraph::matrix_graph::Zero};
 
 use crate::collision::Collider;
 
-use self::state_machine::PlayerEvent;
+use self::{
+    animation::{AnimationIndices, AnimationState, AnimationTimer},
+    state_machine::PlayerEvent,
+};
 
 use super::{move_towards, Gravity, Velocity};
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Player {
+    #[reflect_value]
     pub max_speed: f32,
     pub acceleration: f32,
     pub time_jump_peak: f32,
@@ -28,7 +32,7 @@ pub struct StateTriggerTimer(Option<Timer>);
 impl Default for Player {
     fn default() -> Self {
         Self {
-            max_speed: 4.,
+            max_speed: 2.5,
             acceleration: 50.,
             time_jump_peak: 0.3,
             jump_height: 4.0,
@@ -45,6 +49,7 @@ pub fn setup_player(
 ) {
     let player_size = Vec2::new(22.0, 26.0);
 
+    let player_state = PlayerState::default();
     let mut player = Player::default();
     gravity.0 = (2. * player.jump_height) / player.time_jump_peak.powi(2);
     player.jump_velocity = gravity.0 * player.time_jump_peak;
@@ -60,7 +65,9 @@ pub fn setup_player(
             ..default()
         },
         player,
-        PlayerState::default(),
+        player_state,
+        player_state.get_animation(),
+        AnimationTimer::default(),
         StateTriggerTimer(None),
         Velocity::default(), // This should be context
         Collider::Quad(player_size),
@@ -124,7 +131,7 @@ pub fn player_state_trigger_timer(
 
     match (*player_state, timer) {
         (PlayerState::Idle, None) => {
-            // stt.0 = Some(Timer::from_seconds(2.5, TimerMode::Once));
+            stt.0 = Some(Timer::from_seconds(2.5, TimerMode::Once));
         }
         (PlayerState::Idle, Some(t)) => {
             if t.tick(time.delta()).just_finished() {
@@ -146,43 +153,50 @@ pub fn push_player(mut query: Query<(&PlayerState, &mut Velocity)>, time: Res<Ti
     }
 }
 
-// jump logic
-// d = vi * t + 1/2 * a * t^2
-// vf = vi + a * t
+pub fn animate_sprite(
+    time: Res<Time>,
+    mut query: Query<(
+        &AnimationIndices,
+        &mut AnimationTimer,
+        &mut TextureAtlasSprite,
+    )>,
+) {
+    for (indices, mut timer, mut sprite) in &mut query {
+        if timer.tick(time.delta()).just_finished() {
+            sprite.index = match indices {
+                AnimationIndices::Straight(anim) => {
+                    if sprite.index == anim.last {
+                        anim.repeat_from.unwrap_or(anim.first)
+                    } else {
+                        sprite.index + 1
+                    }
+                }
+            };
 
-// jumpHeight = 1/2 * a * timeToJumpPeak^2
-// gravity = (2 * jumpHeight) / timeToJumpPeak^2
-// jumpVelocity = gravity * timeToJumpPeak
+            println!("Sprite index: {}", sprite.index);
+        }
+    }
+}
 
-// godot:
-// var Velocity = Vector2()
-// var InputVector = Vector2()
-// var JumpAviable = true
-// var JumpBufferPressed = false
-
-// cont MAX_SPEED = 500
-// const ACCELERATION = 3000
-// const UP = Vector2(0, -1)
-// const GRAVITY: float
-// const JUMP_SPEED: float
-
-// export(float) var TimeToJumpPeak = 0.5
-// export(float) var JumpBufferTime = 0.1
-// export(int) var JumpHeight = 128
-
-// func _ready():
-// 	GRAVITY = (2 * JumpHeight) / pow(TimeToJumpPeak, 2)
-// 	JUMP_SPEED = GRAVITY * TimeToJumpPeak
-
-// func _process(delta):
-// 	if is_on_floor():
-// 		JumpAviable = true
-// 		if jumpBufferPressed == true:
-// 			Jump()
-// 	elif JumpAviable == true && CoyoteJumpTimer.is_stopped():
-// 		CoyoteJumpTimer.start()
-// ...
-// Velocity.x = move_towards(Velocity.x, InputVector.x * MAX_SPEED, ACCELERATION * delta)
-
-// jump():
-// 	Velocity.y = -JUMP_SPEED
+pub fn animate_change(
+    mut query: Query<
+        (
+            &mut AnimationIndices,
+            &mut AnimationTimer,
+            &mut TextureAtlasSprite,
+            &PlayerState,
+        ),
+        Changed<PlayerState>,
+    >,
+) {
+    for (mut indices, mut timer, mut sprite, state) in &mut query {
+        *indices = state.get_animation();
+        let only_borrow_indices = &*indices;
+        match only_borrow_indices {
+            AnimationIndices::Straight(anim) => {
+                *timer = AnimationTimer::from_seconds(anim.rate);
+                sprite.index = anim.first;
+            }
+        }
+    }
+}
