@@ -62,6 +62,7 @@ pub fn setup_player(
         SpriteSheetBundle {
             texture_atlas: texture_atlas_handle,
             sprite: TextureAtlasSprite::new(0),
+            transform: Transform::from_xyz(0., 0., 2.),
             ..default()
         },
         player,
@@ -76,10 +77,15 @@ pub fn setup_player(
 
 pub fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Player, &mut PlayerState, &mut Velocity)>,
+    mut query: Query<(
+        &Player,
+        &mut PlayerState,
+        &mut Velocity,
+        &mut TextureAtlasSprite,
+    )>,
     time: Res<Time>,
 ) {
-    let (player, mut player_state, mut player_velocity) = query.single_mut();
+    let (player, mut player_state, mut player_velocity, mut sprite) = query.single_mut();
     let mut direction = Vec2::ZERO;
 
     if keyboard_input.pressed(KeyCode::Left) {
@@ -96,15 +102,21 @@ pub fn move_player(
     }
 
     if !direction.x.is_zero() {
-        if player_state.transition(PlayerEvent::Move) {
-            let delta = time.delta_seconds();
-            player_velocity.x = move_towards(
-                player_velocity.x.clone(),
-                direction.x * player.max_speed,
-                player.acceleration,
-                delta,
-            );
+        let delta = time.delta_seconds();
+        let move_x = move_towards(
+            player_velocity.x.clone(),
+            direction.x * player.max_speed,
+            player.acceleration,
+            delta,
+        );
+        // TODO: refactor
+        if player_state.is(PlayerState::Moving) {
+            player_velocity.x = move_x;
+        } else if player_state.transition(PlayerEvent::Move) {
+            player_velocity.x = move_x;
         }
+
+        sprite.flip_x = direction.x < 0.;
     }
 
     if direction.y < 0. {
@@ -146,10 +158,15 @@ pub fn player_state_trigger_timer(
     }
 }
 
-pub fn push_player(mut query: Query<(&PlayerState, &mut Velocity)>, time: Res<Time>) {
-    let (player_state, mut player_velocity) = query.single_mut();
+pub fn push_player(mut query: Query<(&PlayerState, &Player, &mut Velocity)>, time: Res<Time>) {
+    let (player_state, player, mut player_velocity) = query.single_mut();
     if player_state.is(PlayerState::Pushing) {
-        player_velocity.x = move_towards(player_velocity.x, -20., 25., time.delta_seconds());
+        player_velocity.x = move_towards(
+            player_velocity.x,
+            -player.max_speed * 2.,
+            2.,
+            time.delta_seconds(),
+        );
     }
 }
 
@@ -172,8 +189,6 @@ pub fn animate_sprite(
                     }
                 }
             };
-
-            println!("Sprite index: {}", sprite.index);
         }
     }
 }
@@ -191,6 +206,7 @@ pub fn animate_change(
 ) {
     for (mut indices, mut timer, mut sprite, state) in &mut query {
         *indices = state.get_animation();
+        println!("new_state: {:?}", state);
         let only_borrow_indices = &*indices;
         match only_borrow_indices {
             AnimationIndices::Straight(anim) => {

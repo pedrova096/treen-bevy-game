@@ -78,6 +78,11 @@ impl AnimationState for PlayerState {
                 repeat_from: Some(11),
                 rate: 0.2,
             }),
+            PlayerState::Moving => AnimationIndices::Straight(AnimationStraight {
+                first: 24,
+                last: 31,
+                ..default()
+            }),
             _ => AnimationIndices::Straight(AnimationStraight::default()),
         }
     }
