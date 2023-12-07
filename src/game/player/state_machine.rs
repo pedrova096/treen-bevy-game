@@ -77,10 +77,13 @@ impl AnimationState for PlayerState {
                 last: 12,
                 repeat_from: Some(11),
                 rate: 0.2,
+                ..default()
             }),
             PlayerState::Moving => AnimationIndices::Straight(AnimationStraight {
                 first: 24,
                 last: 31,
+                rate: 0.1,
+                cool_down: Some(0.2),
                 ..default()
             }),
             _ => AnimationIndices::Straight(AnimationStraight::default()),

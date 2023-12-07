@@ -19,6 +19,7 @@ pub struct AnimationStraight {
     pub first: usize,
     pub last: usize,
     pub repeat_from: Option<usize>,
+    pub cool_down: Option<f32>,
 }
 
 impl Default for AnimationStraight {
@@ -28,6 +29,7 @@ impl Default for AnimationStraight {
             first: 0,
             last: 0,
             repeat_from: None,
+            cool_down: None,
         }
     }
 }
@@ -39,4 +41,12 @@ pub enum AnimationIndices {
 
 pub trait AnimationState {
     fn get_animation(&self) -> AnimationIndices;
+}
+
+impl AnimationIndices {
+    pub fn get_cool_down(&self) -> Option<f32> {
+        match self {
+            Self::Straight(anim) => anim.cool_down,
+        }
+    }
 }

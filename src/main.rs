@@ -51,6 +51,7 @@ fn main() {
                 animate_change,
                 apply_gravity,
                 check_for_collisions,
+                animate_cool_down,
                 apply_velocity,
             )
                 // `chain`ing systems toether runs them in order

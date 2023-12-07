@@ -1,8 +1,6 @@
 mod animation;
 mod state_machine;
 
-use std::time::Duration;
-
 use state_machine::PlayerState;
 
 use bevy::{prelude::*, utils::petgraph::matrix_graph::Zero};
@@ -28,6 +26,28 @@ pub struct Player {
 
 #[derive(Component, Deref, DerefMut)]
 pub struct StateTriggerTimer(Option<Timer>);
+
+#[derive(Component, Deref, DerefMut)]
+pub struct AnimationCoolDownTimer(Option<(Timer, PlayerState)>);
+
+impl Default for AnimationCoolDownTimer {
+    fn default() -> Self {
+        Self(None)
+    }
+}
+
+impl AnimationCoolDownTimer {
+    pub fn new(timer: Timer, state: PlayerState) -> Self {
+        Self(Some((timer, state)))
+    }
+
+    pub fn compare_state(&self, state: &PlayerState) -> bool {
+        if let Some((_, s)) = self.0 {
+            return s == *state;
+        }
+        false
+    }
+}
 
 impl Default for Player {
     fn default() -> Self {
@@ -70,6 +90,7 @@ pub fn setup_player(
         player_state.get_animation(),
         AnimationTimer::default(),
         StateTriggerTimer(None),
+        AnimationCoolDownTimer(None),
         Velocity::default(), // This should be context
         Collider::Quad(player_size),
     ));
@@ -117,6 +138,8 @@ pub fn move_player(
         }
 
         sprite.flip_x = direction.x < 0.;
+    } else {
+        println!("direction.x is zero {:?}", time.delta_seconds());
     }
 
     if direction.y < 0. {
@@ -161,12 +184,13 @@ pub fn player_state_trigger_timer(
 pub fn push_player(mut query: Query<(&PlayerState, &Player, &mut Velocity)>, time: Res<Time>) {
     let (player_state, player, mut player_velocity) = query.single_mut();
     if player_state.is(PlayerState::Pushing) {
-        player_velocity.x = move_towards(
+        /* player_velocity.x = move_towards(
             player_velocity.x,
             -player.max_speed * 2.,
             2.,
             time.delta_seconds(),
         );
+        */
     }
 }
 
@@ -180,6 +204,7 @@ pub fn animate_sprite(
 ) {
     for (indices, mut timer, mut sprite) in &mut query {
         if timer.tick(time.delta()).just_finished() {
+            // TODO: refactor
             sprite.index = match indices {
                 AnimationIndices::Straight(anim) => {
                     if sprite.index == anim.last {
@@ -198,21 +223,64 @@ pub fn animate_change(
         (
             &mut AnimationIndices,
             &mut AnimationTimer,
+            &mut AnimationCoolDownTimer,
             &mut TextureAtlasSprite,
             &PlayerState,
         ),
         Changed<PlayerState>,
     >,
 ) {
-    for (mut indices, mut timer, mut sprite, state) in &mut query {
-        *indices = state.get_animation();
-        println!("new_state: {:?}", state);
-        let only_borrow_indices = &*indices;
-        match only_borrow_indices {
-            AnimationIndices::Straight(anim) => {
-                *timer = AnimationTimer::from_seconds(anim.rate);
-                sprite.index = anim.first;
+    for (mut indices, mut timer, mut cool_down_timer, mut sprite, state) in &mut query {
+        // TODO: Check this cases, when Is None, and when is different state
+        if cool_down_timer.compare_state(state) {
+            cool_down_timer.0 = None;
+            continue;
+        }
+
+        if let Some(cool_down) = indices.get_cool_down() {
+            *cool_down_timer = AnimationCoolDownTimer::new(
+                Timer::from_seconds(cool_down, TimerMode::Once),
+                state.clone(),
+            );
+            continue;
+        }
+
+        update_animation(state, &mut indices, &mut timer, &mut sprite);
+    }
+}
+
+pub fn animate_cool_down(
+    time: Res<Time>,
+    mut query: Query<(
+        &mut AnimationCoolDownTimer,
+        &mut AnimationIndices,
+        &mut AnimationTimer,
+        &mut TextureAtlasSprite,
+        &PlayerState,
+    )>,
+) {
+    for (mut cool_down_timer, mut indices, mut animation_timer, mut sprite, state) in &mut query {
+        if let Some((timer, _)) = &mut cool_down_timer.0 {
+            if timer.tick(time.delta()).just_finished() {
+                cool_down_timer.0 = None;
+                update_animation(state, &mut indices, &mut animation_timer, &mut sprite);
             }
+        }
+    }
+}
+
+fn update_animation(
+    state: &PlayerState,
+    indices: &mut AnimationIndices,
+    timer: &mut AnimationTimer,
+    sprite: &mut TextureAtlasSprite,
+) {
+    *indices = state.get_animation();
+    let only_borrow_indices = &*indices;
+    match only_borrow_indices {
+        AnimationIndices::Straight(anim) => {
+            *timer = AnimationTimer::from_seconds(anim.rate);
+            sprite.index = anim.first;
         }
     }
 }
