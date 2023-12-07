@@ -75,7 +75,8 @@ pub fn setup_player(
     player.jump_velocity = gravity.0 * player.time_jump_peak;
 
     let texture_handle = asset_server.load("textures/player.png");
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, player_size, 8, 4, None, None);
+    let texture_atlas =
+        TextureAtlas::from_grid(texture_handle, player_size, 8, 4, Some(Vec2::ONE), None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     commands.spawn((
