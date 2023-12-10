@@ -83,10 +83,12 @@ pub fn setup_train(
 
     let windows_resolution = &windows.single().resolution;
 
+    let train_entity = commands.spawn(SpatialBundle::default()).id();
+
     for wagon in WAGONS.iter() {
         let (texture, width, height) = wagon::get_asset_info(*wagon);
         let origin_x = width / 2.;
-        commands
+        let wagon_entity = commands
             .spawn((
                 SpatialBundle {
                     transform: Transform::from_xyz(
@@ -98,7 +100,7 @@ pub fn setup_train(
                 },
                 Collider::Quad(Vec2::new(width, height)),
             ))
-            .with_children(|parent: &mut ChildBuilder<'_, '_, '_>| {
+            .with_children(|parent| {
                 // wagon
                 parent.spawn(SpriteBundle {
                     texture: asset_server.load(texture),
@@ -126,7 +128,11 @@ pub fn setup_train(
                         ..default()
                     });
                 }
-            });
+            })
+            .id();
+
+        commands.entity(train_entity).push_children(&[wagon_entity]);
+
         x += width + wagon::UNION.1;
     }
 }
