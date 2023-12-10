@@ -79,35 +79,54 @@ pub fn setup_player(
         TextureAtlas::from_grid(texture_handle, player_size, 8, 4, Some(Vec2::ONE), None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    commands.spawn((
-        SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            sprite: TextureAtlasSprite::new(0),
-            transform: Transform::from_xyz(0., 0., 2.),
-            ..default()
-        },
-        player,
-        player_state,
-        player_state.get_animation(),
-        AnimationTimer::default(),
-        StateTriggerTimer(None),
-        AnimationCoolDownTimer(None),
-        Velocity::default(), // This should be context
-        Collider::Quad(player_size),
-    ));
+    commands
+        .spawn((
+            SpatialBundle {
+                transform: Transform::from_xyz(0., 0., 2.),
+                ..default()
+            },
+            player,
+            player_state,
+            StateTriggerTimer(None),
+            Velocity::default(), // This should be context
+            Collider::Quad(player_size),
+        ))
+        .with_children(|parent| {
+            parent.spawn(SpriteBundle {
+                texture: asset_server.load("textures/player_left_hand.png"),
+                transform: Transform::from_xyz(7.0, -6.0, 0.),
+                ..default()
+            });
+
+            parent.spawn((
+                SpriteSheetBundle {
+                    texture_atlas: texture_atlas_handle.clone(),
+                    sprite: TextureAtlasSprite::new(0),
+                    transform: Transform::from_xyz(0., 0., 1.),
+                    ..default()
+                },
+                AnimationTimer::default(),
+                player_state.get_animation(),
+                AnimationCoolDownTimer(None),
+            ));
+
+            parent.spawn(SpriteBundle {
+                texture: asset_server.load("textures/player_right_hand.png"),
+                transform: Transform::from_xyz(-9.0, -6.0, 2.),
+                ..default()
+            });
+        });
 }
 
+// TODO: try Res<PlayerState> instead of Query
 pub fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(
-        &Player,
-        &mut PlayerState,
-        &mut Velocity,
-        &mut TextureAtlasSprite,
-    )>,
+    mut query: Query<(&Player, &mut PlayerState, &mut Velocity)>,
+    mut sprite_query: Query<&mut TextureAtlasSprite, With<AnimationIndices>>,
     time: Res<Time>,
 ) {
-    let (player, mut player_state, mut player_velocity, mut sprite) = query.single_mut();
+    let (player, mut player_state, mut player_velocity) = query.single_mut();
+    let mut sprite = sprite_query.single_mut();
     let mut direction = Vec2::ZERO;
 
     if keyboard_input.pressed(KeyCode::Left) {
@@ -140,7 +159,7 @@ pub fn move_player(
 
         sprite.flip_x = direction.x < 0.;
     } else {
-        println!("direction.x is zero {:?}", time.delta_seconds());
+        // println!("direction.x is zero {:?}", time.delta_seconds());
     }
 
     if direction.y < 0. {
@@ -220,19 +239,17 @@ pub fn animate_sprite(
 }
 
 pub fn animate_change(
-    mut query: Query<
-        (
-            &mut AnimationIndices,
-            &mut AnimationTimer,
-            &mut AnimationCoolDownTimer,
-            &mut TextureAtlasSprite,
-            &PlayerState,
-        ),
-        Changed<PlayerState>,
-    >,
+    state_query: Query<&PlayerState, Changed<PlayerState>>,
+    mut query: Query<(
+        &mut AnimationIndices,
+        &mut AnimationTimer,
+        &mut AnimationCoolDownTimer,
+        &mut TextureAtlasSprite,
+    )>,
 ) {
-    for (mut indices, mut timer, mut cool_down_timer, mut sprite, state) in &mut query {
-        // TODO: Check this cases, when Is None, and when is different state
+    for state in &state_query {
+        let (mut indices, mut timer, mut cool_down_timer, mut sprite) = query.single_mut();
+
         if cool_down_timer.compare_state(state) {
             cool_down_timer.0 = None;
             continue;
@@ -257,13 +274,14 @@ pub fn animate_cool_down(
         &mut AnimationIndices,
         &mut AnimationTimer,
         &mut TextureAtlasSprite,
-        &PlayerState,
     )>,
+    state_query: Query<&PlayerState>,
 ) {
-    for (mut cool_down_timer, mut indices, mut animation_timer, mut sprite, state) in &mut query {
+    for (mut cool_down_timer, mut indices, mut animation_timer, mut sprite) in &mut query {
         if let Some((timer, _)) = &mut cool_down_timer.0 {
             if timer.tick(time.delta()).just_finished() {
                 cool_down_timer.0 = None;
+                let state = state_query.single();
                 update_animation(state, &mut indices, &mut animation_timer, &mut sprite);
             }
         }

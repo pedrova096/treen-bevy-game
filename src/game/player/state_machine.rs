@@ -83,7 +83,7 @@ impl AnimationState for PlayerState {
                 first: 24,
                 last: 31,
                 rate: 0.1,
-                cool_down: Some(0.2),
+                cool_down: Some(0.15),
                 ..default()
             }),
             _ => AnimationIndices::Straight(AnimationStraight::default()),
